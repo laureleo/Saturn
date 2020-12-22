@@ -1,0 +1,36 @@
+eyes_of_argus:
+creationdate, url, newspaper_name, newspaper_country, language, header_function, excerpt_function.
+
+for entry into eyes-of_argus()
+try:
+    eye = materialize(entry)
+catch: 
+    couult not materialize eye.
+
+materialize(entry)
+creationdate, 
+url, 
+newspaper,
+crountry, 
+language,
+header = 
+excerpt = 
+
+def watch()
+header = "Not found"
+excerpt = "Not found"
+try
+    header = headercode(url)
+try
+    excerpt = excerptcode(url)
+
+catch error E
+    {eye for {url} failed at extracting header.
+    consider updaing the eye of argus database
+
+
+
+for eye in eyes:
+    eye.watch()
+    eye.communicate()
+    
