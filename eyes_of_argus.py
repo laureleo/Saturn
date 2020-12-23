@@ -96,7 +96,7 @@ class Proto_eye():
          for head in ['h1', 'h2', 'h3', 'h4', 'h5', 'h6']:
             header = self.soup.find(head)
             if header != None: 
-                return header.text
+                return cb[2] +  header.text
 
     def get_excerpt(self):
         excerpt = "Not found"
@@ -106,7 +106,7 @@ class Proto_eye():
                 excerpt = header.findNext().text
                 if excerpt == '\n':
                     excerpt = header.findNext().findNext().text
-        return excerpt
+        return cb[2] excerpt
 
 ### NORTH AMERICA
 # CANADA
