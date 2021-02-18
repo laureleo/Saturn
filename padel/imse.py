@@ -1,4 +1,3 @@
-#!/usr/bin/python2.7
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 import pandas as pd
@@ -6,18 +5,30 @@ import time
 import logging
 from bs4 import BeautifulSoup
 from datetime import datetime  
-from datetime import timedelta  
+from datetime import timedelta 
+from pyvirtualdisplay import Display
+import random
 
-logging.basicConfig(filename='imse.log', level=logging.INFO)
-#logging.basicConfig(level=logging.INFO)
 
+weekday_mapper = {
+    0: 'Monday',
+    1: 'Tuesday',
+    2: 'Wednesday',
+    3: 'Thursday',
+    4: 'Friday',
+    5: 'Saturday',
+    6: 'Sunday'
+}
 
+from assets.creds_m import *
+
+#logging.basicConfig(filename='imse.log', level=logging.INFO)
+logging.basicConfig(level=logging.INFO)
 
 today = datetime.today()
 then = today + timedelta(days=14)
 
-logging.info(f"Today is {str(today)[:10]}. I'm going to check {str(then)[:10]} for free slots!")
-
+logging.info(f"It is {weekday_mapper[today.weekday()]}!\nImse is waking up, acting on (alias) {alias}s behalf\n")
 year = then.year
 month = then.month
 day = then.day
@@ -27,36 +38,38 @@ https://www.matchi.se/facilities/nynashamnpadelcenter?date={year}-{month}-{day}&
 
 login_url = "https://www.matchi.se/login/auth?returnUrl=%2Ffacilities%2Fnynashamnpadelcenter"
 
-logging.info(f"Logging in at {login_url}...")
-logging.info(f"Moving to the correct date at {book_url}...")
+logging.debug(f"Logging in at {login_url}...")
+logging.debug(f"Moving to the correct date at {book_url}...")
+d = Display(visible=0, size=(2560, 1440))
+d.start()
 
 try:
-    logging.info(f"IMSE ACTIVATED AT {str(datetime.now())}")
-    driver = webdriver.Chrome()
+    logging.info(f"Despite being sleepy, Imse got up from his bed at {str(datetime.now())}")
+    driver = webdriver.Firefox()
     driver.get(login_url)
     assert driver.title == 'Login - MATCHi'
-    logging.info("Logging in...")
 
     username = driver.find_element_by_id("username")
     username.clear()
-    username.send_keys("Leoctio@gmail.com")
+    username.send_keys(uname)
 
     password = driver.find_element_by_name("j_password")
     password.clear()
-    password.send_keys("ignotus")
+    password.send_keys(pwd)
 
     driver.find_element_by_xpath('//*[@id="loginForm"]/button').click()
-    time.sleep(1)
+    logging.info(f"On unsteady legs, Imse found himself at MATCHi at  {str(datetime.now())}")
 
     driver.get(book_url)
     driver.fullscreen_window()
-
-    time.sleep(1)
-    logging.info("Looking for free slots...")
+    driver.save_screenshot(f"/home/vic/git/Saturn/padel/imsse_{str(datetime.now())}.png")
 
 
+
+    
+    logging.info(f"Through bleary eyes, Imse started looking for free timeslots at {str(then)[:10]}...")
     soup = BeautifulSoup(driver.page_source, 'lxml')
-    time.sleep(1)
+    #time.sleep(1)
     schedule = soup.find('div', attrs = {'class': 'schedule'})
     free = schedule.find_all('td', attrs = {'class': 'slot free'})
     
@@ -74,41 +87,45 @@ try:
         slots.at[i, "NAME"] = name
         slots.at[i, "START"] = start
         slots.at[i, "END"] = end
-    logging.info(f"Found {slots}")
+    logging.debug(f"Found {slots}")
+    logging.info(f"There, his tired spider eyes saw \n\n{slots[['NAME','START','END']]}\n\n...but which to pick?")
 
-
-
-    time_priority = ['15:00', '16:00','23:00', '14:00']
+    #time_priority = ['15:00', '16:00', '14:00']
+    time_priority = ['18:00', '18:30', '17:30']
+    DONE = 0
 
     for i, p in enumerate(time_priority):
-        matched_slots = slots[slots['START'] == p].shape[0]
-        logging.info(f"Looking at priority {i + 1} timeslot, {p}, and found {matched_slots} possibilities")
+        if DONE == 0:
+            matched_slots = slots[slots['START'] == p].shape[0]
+            logging.info(f"Imse searched for priority {i + 1} timeslots, ({p}), and found {matched_slots} possibilities")
 
-        if matched_slots > 0:
-            selected_booking_data = slots[slots['START'] == '23:00'].iloc[0]
-            logging.info(f"Selecting {selected_booking_data}")
-            SELECTED_ID = selected_booking_data.SLOT_ID
-            try:
+            if matched_slots > 0:
+                for slot_index in range(matched_slots):
+                    selected_booking_data = slots[slots['START'] == p].iloc[slot_index]
+                    logging.info(f"Feeling a burst of energy, Imse goes for the kill and tries to book {selected_booking_data[1]} at {selected_booking_data[2]}!")
+                    SELECTED_ID = selected_booking_data.SLOT_ID
+                    try:
+                        selected_slot = driver.find_element_by_css_selector(f"td[slotid='{SELECTED_ID}']")
+                        
+                        driver.save_screenshot(f"/home/vic/git/Saturn/padel/imsse_{str(datetime.now())}.png")
+                        selected_slot.click()
+                        time.sleep(random.uniform(1,5))
+                        logging.info(f"Imse made the booking attempt {(datetime.now() - today).seconds} seconds after waking up...")
 
-                logging.info(f"Attempting to book {SELECTED_ID} at {str(datetime.now())}")
+                        driver.find_element_by_id('btnSubmit').click()
+                        logging.info("...And he made it!")
+                        DONE = 1
+                        break
+                    except Exception as e:
+                        logging.warning(f"But Imse couldn't book that for some reason, so he gathers  his courage for a new attempt... {e}")
 
-                selected_slot = driver.find_element_by_css_selector(f"td[slotid='{SELECTED_ID}']")
-                selected_slot.click()
-                time.sleep(1)
-                driver.find_element_by_id('btnSubmit').click()
+    if DONE == 0:
+        logging.info("Imse seems to have failed. He is sorry to have dissapointed you, and promises to do better next time")
+    else:
+        logging.info("Blissfully happy, Imse went back to sleep with a light spider heart")
 
-                time.sleep(1)
-
-                payment_name = driver.find_element_by_xpath("//input[@placeholder='Card owner name']")
-                payment_name.send_keys("El donatello")
-            
-                break;
-            except Exception as e:
-                logging.warn("Couln't book that, continuing... {e}")
-                
-
-    time.sleep(1)
-    driver.close()
 except Exception as e:
-    logging.warning(f"Imse was Vimse and fell down the drain: / {e}")
-    driver.close()
+    logging.warning(f"Imse was Vimse and fell down the drain : / {e}")
+
+driver.close()
+d.stop()
